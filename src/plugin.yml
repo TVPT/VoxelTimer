@@ -1,0 +1,29 @@
+name: VoxelTimer
+main: Code.VoxelTimer
+version: 1.001
+website: http://voxelwiki.com
+author: Giltwist
+description: >
+             Countdown timers for server events with TP included.
+commands:
+  vtstart:
+    description: Start a server event
+    usage: |
+           /<command> <EventName> <duration> [TPonjoin:default true]
+           Example: /<command> - need to write the help.
+  vtlist:
+    description: List active server events and remaining time
+    usage: |
+           /<command>
+           Example: /<command> - need to write the help.
+  vtjoin:
+    description: If enabled, allows player to be TPed to an event
+    usage: |
+           /<command> <EventName>
+           Example: /<command> - need to write the help.
+
+  vtstop:
+    description: Stops a server event
+    usage: |
+           /<command> <EventName>
+           Example: /<command> - need to write the help.
