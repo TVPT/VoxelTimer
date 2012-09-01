@@ -231,7 +231,7 @@ public class VoxelTimer extends JavaPlugin {
         boolean jointemp = true;
         long DateTime = new Date().getTime();
         for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
-        	if (VoxelTimer.EventList.get(i).eventname.startsWith(vtargs[0])) {
+            if (vtargs[0].equalsIgnoreCase(VoxelTimer.EventList.get(i).eventname)) {
                 if (VoxelTimer.EventList.get(i).endtime > DateTime) {
                     jointemp = false;
                     if (VoxelTimer.EventList.get(i).tponjoin) {
