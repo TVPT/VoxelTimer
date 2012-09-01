@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.thevoxelbox.voxeltimer;
 
 import java.io.File;
@@ -12,26 +8,58 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.Scanner;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- *
+ * 
  * @author giltwist
  */
 public class VoxelTimer extends JavaPlugin {
 
-    private Player p;
-    private World w;
-    protected static final Logger log = Logger.getLogger("Minecraft");
-    public static TreeSet<String> admns = new TreeSet<String>();
-    public static ArrayList<VoxelEvent> EventList = new ArrayList<VoxelEvent>();
+    private static TreeSet<String> admns = new TreeSet<String>();
+    private static ArrayList<VoxelEvent> EventList = new ArrayList<VoxelEvent>();
+    private static Comparator<VoxelEvent> chrono = new Comparator<VoxelEvent>() {
+        @Override
+        public int compare(final VoxelEvent first, final VoxelEvent second) {
+            return ((Long) first.endtime).compareTo(second.endtime);
+        }
+    };
+    private File admnsFile;;
+
+    @Override
+    public boolean onCommand(final CommandSender sender, final Command command, final String commandLabel, final String[] args) {
+        if (!(sender instanceof Player)) {
+            return false;
+        }
+        final Player _player = (Player) sender;
+
+        if (command.getName().equalsIgnoreCase("vtstart")) {
+            if (VoxelTimer.admns.contains(_player.getName())) {
+                return this.commandVtStart(args, _player);
+            } else {
+                _player.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+            }
+        } else if (command.getName().equalsIgnoreCase("vtstop")) {
+            if (VoxelTimer.admns.contains(_player.getName())) {
+                return this.commandVtStop(args, _player);
+            } else {
+                _player.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+            }
+        } else if (command.getName().equalsIgnoreCase("vtlist")) {
+            return this.commandVtList(_player);
+        } else if (command.getName().equalsIgnoreCase("vtjoin")) {
+            return this.commandVtJoin(args, _player);
+        } else {
+            return false;
+        }
+        return false;
+    }
 
     @Override
     public void onDisable() {
@@ -40,165 +68,144 @@ public class VoxelTimer extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        readAdmins();
-        readEvents();
-        log.info("[VoxelTimer] ticking.");
+        this.readAdmins();
+        this.readEvents();
+        this.getLogger().info("ticking.");
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String commandLabel, String[] args) {
-        p = (Player) sender;
-        w = p.getWorld();
-        boolean commstatus = true;
+    public void readAdmins() {
+        try {
+            this.admnsFile = new File("plugins/admns.txt");
+            if (!this.admnsFile.exists()) {
+                this.admnsFile.createNewFile();
+                this.getLogger().info("admns.txt was missing and thus created.");
+            }
+            final Scanner snr = new Scanner(this.admnsFile);
+            while (snr.hasNext()) {
+                final String st = snr.nextLine();
+                VoxelTimer.admns.add(st);
+            }
+            snr.close();
+        } catch (final Exception e) {
+            this.getLogger().warning("Error while loading admns.txt");
+        }
+    }
 
-
-
-        String comm = command.getName().toLowerCase();
-
-        if (comm.equals("vtstart")) {
-
-            if (admns.contains(p.getName())) {
-
-                if (args.length != 2 && args.length != 3) {
-                    p.sendMessage("Use: /vtstart <eventname> <duration> [tponjoin:default true]");
-                } else {
-                    dovtstart(args);
+    public void readEvents() {
+        try {
+            final File f = new File("plugins/VoxelTimer/Events.list");
+            if (!f.exists()) {
+                this.getLogger().info(f.getPath() + " not found; Creating one.");
+                this.writeEvents();
+            }
+            final Scanner snr = new Scanner(f);
+            final long DateTime = new Date().getTime();
+            while (snr.hasNext()) {
+                final String st = snr.nextLine();
+                if (!st.startsWith("!")) {
+                    final String[] sts = st.split(",");
+                    final VoxelEvent se = new VoxelEvent(sts[0], Long.parseLong(sts[1]), Integer.parseInt(sts[2]), Integer.parseInt(sts[3]),
+                            Integer.parseInt(sts[4]), sts[5], Boolean.parseBoolean(sts[6]));
+                    if (se.endtime > DateTime) {
+                        VoxelTimer.EventList.add(se);
+                    }
                 }
-            } else {
-
-                p.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
             }
+            this.getLogger().info("has read " + VoxelTimer.EventList.size() + " events from " + f.getPath());
 
-        } else if (comm.equals("vtstop")) {
+            snr.close();
+        } catch (final Exception e) {
+            this.getLogger().warning("Error while loading events.");
+        }
+    }
 
-            if (admns.contains(p.getName())) {
+    public void writeEvents() {
+        try {
+            final File oldFile = new File("plugins/VoxelTimer/Events.list");
+            if (!oldFile.getParentFile().isDirectory()) {
+                oldFile.mkdirs();
+            }
+            oldFile.delete();
 
-                if (args.length != 1) {
-                    p.sendMessage("Use: /vtstop <eventname>");
-                } else {
-                    dovtstop(args);
+            final File newFile = new File("plugins/VoxelTimer/Events.list");
+            newFile.createNewFile();
+
+            final PrintWriter pw = new PrintWriter(new File("plugins/VoxelTimer/Events.list"));
+
+            pw.write("!Eventname,endtime,x,y,z,world,tponjoin\r\n");
+            final long DateTime = new Date().getTime();
+            for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
+                final VoxelEvent tempwrite = VoxelTimer.EventList.get(i);
+                if (tempwrite.endtime > DateTime && !tempwrite.eventname.startsWith("!")) {
+                    pw.write(tempwrite.eventname + "," + tempwrite.endtime + "," + tempwrite.x + "," + tempwrite.y + "," + tempwrite.z + "," + tempwrite.world
+                            + "," + tempwrite.tponjoin + "\r\n");
                 }
-            } else {
-
-                p.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
             }
-
-        } else if (comm.equals("vtlist")) {
-            dovtlist();
-        } else if (comm.equals("vtjoin")) {
-            if (args.length != 1) {
-                p.sendMessage("Use: /vtjoin <eventname>");
-            } else {
-                dovtjoin(args);
-            }
-        } else {
-            commstatus = false;
+            pw.close();
+        } catch (final Exception e) {
+            this.getLogger().warning("[VoxelTimer] Error while writing plugins/VoxelTimer/Events.list");
         }
-
-
-        return commstatus;
-
     }
 
-    public void dovtstart(String[] vtargs) {
-        clearEvents();
-        boolean starterror = false;
-        long DateTime = new Date().getTime();
-        String[] sts = new String[7];
-        if (vtargs[0].startsWith("!")) {
-            starterror = true;
-            p.sendMessage(ChatColor.RED + "May not start eventname with a !");
+    /**
+     * @param args
+     * @param player
+     * @return boolean
+     */
+    private boolean commandVtJoin(final String[] args, final Player player) {
+        if (args.length != 1) {
+            return false;
+        } else {
+            boolean jointemp = true;
+            final long DateTime = new Date().getTime();
+            for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
+                if (args[0].equalsIgnoreCase(VoxelTimer.EventList.get(i).eventname)) {
+                    if (VoxelTimer.EventList.get(i).endtime > DateTime) {
+                        jointemp = false;
+                        if (VoxelTimer.EventList.get(i).tponjoin) {
+                            player.teleport(new Location(player.getServer().getWorld(VoxelTimer.EventList.get(i).world), VoxelTimer.EventList.get(i).x,
+                                    VoxelTimer.EventList.get(i).y, VoxelTimer.EventList.get(i).z));
+                        } else {
+                            player.sendMessage(ChatColor.RED + "There is no teleport associated with that event.");
+                        }
+                    } else {
+                        player.sendMessage(ChatColor.RED + "That event has ended.");
+                    }
+                }
+            }
+            if (jointemp) {
+                player.sendMessage(ChatColor.RED + "Event not found.");
+            }
+            return true;
         }
+    }
+
+    /**
+     * @param player
+     * @return boolean
+     */
+    private boolean commandVtList(final Player player) {
+        Collections.sort(VoxelTimer.EventList, VoxelTimer.chrono);
+
+        if (VoxelTimer.EventList.isEmpty()) {
+            player.sendMessage(ChatColor.BLUE + "No current Events!");
+            return true;
+        }
+
+        player.sendMessage(ChatColor.BLUE + "Current Events:");
         for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
-            if (vtargs[0].equalsIgnoreCase(VoxelTimer.EventList.get(i).eventname)) {
-                starterror = true;
-                p.sendMessage(ChatColor.RED + "An event with that name already exists.");
-            }
-        }
-        sts[0] = vtargs[0];
-        String timetemp = vtargs[1];
-        String[] parsedtime = timetemp.split(":"); //d:h:m
-        int units = parsedtime.length;
-        //long[] unitfactor={86400000,3600000,60000};
-        long totaltime = 0;
-        switch (units) {
-            case 1:
-                totaltime = Math.abs(60000 * Integer.parseInt(parsedtime[0]));
-                break;
-            case 2:
-                totaltime = Math.abs(3600000 * Integer.parseInt(parsedtime[0]) + 60000 * Integer.parseInt(parsedtime[1]));
-                break;
-            case 3:
-                totaltime = Math.abs(86400000 * Integer.parseInt(parsedtime[0]) + 3600000 * Integer.parseInt(parsedtime[1]) + 60000 * Integer.parseInt(parsedtime[2]));
-                break;
-            default:
-                starterror = true;
-                p.sendMessage(ChatColor.RED + "Invalid duration");
-        }
-
-        sts[2] = Integer.toString(p.getLocation().getBlockX());
-        sts[3] = Integer.toString(p.getLocation().getBlockY());
-        sts[4] = Integer.toString(p.getLocation().getBlockZ());
-        sts[5] = p.getWorld().getName();
-        if (vtargs.length == 3 && (vtargs[2].equalsIgnoreCase("true") || vtargs[2].equalsIgnoreCase("false"))) {
-            sts[6] = vtargs[2];
-        } else {
-            sts[6] = "true";
-        }
-
-        VoxelEvent se = new VoxelEvent(sts[0], totaltime + DateTime, Integer.parseInt(sts[2]), Integer.parseInt(sts[3]), Integer.parseInt(sts[4]), sts[5], Boolean.parseBoolean(sts[6]));
-        if (!starterror) {
-            VoxelTimer.EventList.add(se);
-            writeEvents();
-            p.sendMessage(ChatColor.GREEN + "Event added successfully.");
-        }
-    }
-
-    public void dovtstop(String[] vtargs) {
-        int stoptemp = -1;
-        for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
-            if (vtargs[0].equalsIgnoreCase(VoxelTimer.EventList.get(i).eventname)) {
-                stoptemp = i;
-            }
-        }
-
-        if (stoptemp >= 0) {
-            VoxelTimer.EventList.remove(stoptemp);
-            writeEvents();
-            p.sendMessage(ChatColor.GOLD + "Event deleted.");
-        } else {
-            p.sendMessage(ChatColor.RED + "Event not found.");
-        }
-
-    }
-
-    public void dovtlist() {
-        p.sendMessage(ChatColor.BLUE + "Current Events:");
-        ArrayList<VoxelEvent> SortList = VoxelTimer.EventList;
-               
-        Comparator chrono=new Comparator<VoxelEvent>() {
-
-            public int compare(VoxelEvent first, VoxelEvent second) {
-                Long firsttime=first.endtime;
-                Long secondtime=second.endtime;
-                return firsttime.compareTo(secondtime);
-            }
-        };
-        Collections.sort(SortList, chrono);
-        
-        for (int i = 0; i < SortList.size(); i++) {
-            VoxelEvent listtemp = SortList.get(i);
-            long DateTime = new Date().getTime();
-            long temptime = listtemp.endtime;
+            final VoxelEvent listtemp = VoxelTimer.EventList.get(i);
+            final long DateTime = new Date().getTime();
+            final long temptime = listtemp.endtime;
             long timeoffset = temptime - DateTime;
             if (timeoffset > 0) {
-                int tempday = (int) Math.max(Math.floor(timeoffset / 86400000), 0);
+                final int tempday = (int) Math.max(Math.floor(timeoffset / 86400000), 0);
                 timeoffset = timeoffset - tempday * 86400000;
-                int temphour = (int) Math.max(Math.floor(timeoffset / 3600000), 0);
+                final int temphour = (int) Math.max(Math.floor(timeoffset / 3600000), 0);
                 timeoffset = timeoffset - temphour * 3600000;
-                int tempminute = (int) Math.max(Math.floor(timeoffset / 60000), 0);
+                final int tempminute = (int) Math.max(Math.floor(timeoffset / 60000), 0);
                 timeoffset = timeoffset - tempminute * 60000;
-                int tempsec = (int) Math.max(Math.floor(timeoffset / 1000), 0);
+                final int tempsec = (int) Math.max(Math.floor(timeoffset / 1000), 0);
                 timeoffset = timeoffset - tempsec * 1000;
 
                 String tempremaining = "";
@@ -219,117 +226,109 @@ public class VoxelTimer extends JavaPlugin {
 
                 tempremaining = tempremaining.concat(Integer.toString(tempsec) + "s");
 
-
-                p.sendMessage(ChatColor.GOLD + listtemp.eventname + " - " + tempremaining);
+                player.sendMessage(ChatColor.GOLD + listtemp.eventname + " - " + tempremaining);
             }
 
         }
-
+        return true;
     }
 
-    public void dovtjoin(String[] vtargs) {
-        boolean jointemp = true;
-        long DateTime = new Date().getTime();
-        for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
-            if (vtargs[0].equalsIgnoreCase(VoxelTimer.EventList.get(i).eventname)) {
-                if (VoxelTimer.EventList.get(i).endtime > DateTime) {
-                    jointemp = false;
-                    if (VoxelTimer.EventList.get(i).tponjoin) {
-                        p.teleport(new Location(p.getServer().getWorld(VoxelTimer.EventList.get(i).world), (double) VoxelTimer.EventList.get(i).x, (double) VoxelTimer.EventList.get(i).y, (double) VoxelTimer.EventList.get(i).z));
-                    } else {
-                        p.sendMessage(ChatColor.RED + "There is no teleport associated with that event.");
-                    }
-                } else {
-                    p.sendMessage(ChatColor.RED + "That event has ended.");
+    /**
+     * @param args
+     * @param player
+     * @return boolean
+     */
+    private boolean commandVtStart(final String[] args, final Player player) {
+        if (args.length != 2 && args.length != 3) {
+            return false;
+        } else {
+            final ArrayList<VoxelEvent> ClearList = new ArrayList<VoxelEvent>();
+            final long DateTime1 = new Date().getTime();
+            for (int i1 = 0; i1 < VoxelTimer.EventList.size(); i1++) {
+                if (VoxelTimer.EventList.get(i1).endtime < DateTime1) {
+                    ClearList.add(VoxelTimer.EventList.get(i1));
                 }
             }
-        }
-        if (jointemp) {
-            p.sendMessage(ChatColor.RED + "Event not found.");
-        }
-    }
-
-    public void readAdmins() { //Shamelessly stolen from VoxelGuest to maintain inter-plugin compatibility
-        try {
-            File f = new File("plugins/admns.txt");
-            if (!f.exists()) {
-                f.createNewFile();
-                log.info("[VoxelTimer] admns.txt was missing and thus created.");
+            VoxelTimer.EventList.removeAll(ClearList);
+            boolean starterror = false;
+            final long DateTime = new Date().getTime();
+            final String[] sts = new String[7];
+            if (args[0].startsWith("!")) {
+                starterror = true;
+                player.sendMessage(ChatColor.RED + "May not start eventname with a !");
             }
-            Scanner snr = new Scanner(f);
-            while (snr.hasNext()) {
-                String st = snr.nextLine();
-                admns.add(st);
-            }
-            snr.close();
-        } catch (Exception e) {
-            log.warning("[VoxelTimer] Error while loading admns.txt");
-        }
-    }
-
-    public void readEvents() {
-        try {
-            File f = new File("plugins/VoxelTimer/Events.list");
-            if (!f.exists()) {
-                log.info("[VoxelTimer] plugins/VoxelTimer/Events.list not found; Creating one.");
-                writeEvents();
-            }
-            Scanner snr = new Scanner(f);
-            long DateTime = new Date().getTime();
-            while (snr.hasNext()) {
-                String st = snr.nextLine();
-                if (!st.startsWith("!")) {
-                    String[] sts = st.split(",");
-                    VoxelEvent se = new VoxelEvent(sts[0], Long.parseLong(sts[1]), Integer.parseInt(sts[2]), Integer.parseInt(sts[3]), Integer.parseInt(sts[4]), sts[5], Boolean.parseBoolean(sts[6]));
-                    if (se.endtime > DateTime) {
-                        VoxelTimer.EventList.add(se);
-                    }
-                }
-            }
-            log.info("[VoxelTimer] has read " + VoxelTimer.EventList.size() + " events from plugins/VoxelTimer/Events.list");
-
-            snr.close();
-        } catch (Exception e) {
-            log.warning("[VoxelTimer] Error while loading plugins/VoxelTimer/Events.list");
-        }
-    }
-
-    public void writeEvents() {
-
-        try {
-            File oldFile = new File("plugins/VoxelTimer/Events.list");
-            if (!oldFile.getParentFile().isDirectory()) {
-                oldFile.mkdirs();
-            }
-            oldFile.delete();
-
-            File newFile = new File("plugins/VoxelTimer/Events.list");
-            newFile.createNewFile();
-
-            PrintWriter pw = new PrintWriter(new File("plugins/VoxelTimer/Events.list"));
-
-            pw.write("!Eventname,endtime,x,y,z,world,tponjoin\r\n");
-            long DateTime = new Date().getTime();
             for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
-                VoxelEvent tempwrite = VoxelTimer.EventList.get(i);
-                if (tempwrite.endtime > DateTime && !tempwrite.eventname.startsWith("!")) {
-                    pw.write(tempwrite.eventname + "," + tempwrite.endtime + "," + tempwrite.x + "," + tempwrite.y + "," + tempwrite.z + "," + tempwrite.world + "," + tempwrite.tponjoin + "\r\n");
+                if (args[0].equalsIgnoreCase(VoxelTimer.EventList.get(i).eventname)) {
+                    starterror = true;
+                    player.sendMessage(ChatColor.RED + "An event with that name already exists.");
                 }
             }
-            pw.close();
-        } catch (Exception e) {
-            log.warning("[VoxelTimer] Error while writing plugins/VoxelTimer/Events.list");
+            sts[0] = args[0];
+            final String timetemp = args[1];
+            final String[] parsedtime = timetemp.split(":"); // d:h:m
+            final int units = parsedtime.length;
+            long totaltime = 0;
+            switch (units) {
+            case 1:
+                totaltime = Math.abs(60000 * Integer.parseInt(parsedtime[0]));
+                break;
+            case 2:
+                totaltime = Math.abs(3600000 * Integer.parseInt(parsedtime[0]) + 60000 * Integer.parseInt(parsedtime[1]));
+                break;
+            case 3:
+                totaltime = Math.abs(86400000 * Integer.parseInt(parsedtime[0]) + 3600000 * Integer.parseInt(parsedtime[1]) + 60000
+                        * Integer.parseInt(parsedtime[2]));
+                break;
+            default:
+                starterror = true;
+                player.sendMessage(ChatColor.RED + "Invalid duration");
+            }
+
+            sts[2] = Integer.toString(player.getLocation().getBlockX());
+            sts[3] = Integer.toString(player.getLocation().getBlockY());
+            sts[4] = Integer.toString(player.getLocation().getBlockZ());
+            sts[5] = player.getWorld().getName();
+            if (args.length == 3 && (args[2].equalsIgnoreCase("true") || args[2].equalsIgnoreCase("false"))) {
+                sts[6] = args[2];
+            } else {
+                sts[6] = "true";
+            }
+
+            final VoxelEvent se = new VoxelEvent(sts[0], totaltime + DateTime, Integer.parseInt(sts[2]), Integer.parseInt(sts[3]), Integer.parseInt(sts[4]),
+                    sts[5], Boolean.parseBoolean(sts[6]));
+            if (!starterror) {
+                VoxelTimer.EventList.add(se);
+                this.writeEvents();
+                player.sendMessage(ChatColor.GREEN + "Event added successfully.");
+            }
+            return true;
         }
     }
 
-    public void clearEvents() {
-        ArrayList<VoxelEvent> ClearList = new ArrayList<VoxelEvent>();
-        long DateTime = new Date().getTime();
-        for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
-            if (VoxelTimer.EventList.get(i).endtime < DateTime) {
-                ClearList.add(VoxelTimer.EventList.get(i));
+    /**
+     * @param args
+     * @param player
+     * @return boolean
+     */
+    private boolean commandVtStop(final String[] args, final Player player) {
+        if (args.length != 1) {
+            return false;
+        } else {
+            int stoptemp = -1;
+            for (int i = 0; i < VoxelTimer.EventList.size(); i++) {
+                if (args[0].equalsIgnoreCase(VoxelTimer.EventList.get(i).eventname)) {
+                    stoptemp = i;
+                }
             }
+
+            if (stoptemp >= 0) {
+                VoxelTimer.EventList.remove(stoptemp);
+                this.writeEvents();
+                player.sendMessage(ChatColor.GOLD + "Event deleted.");
+            } else {
+                player.sendMessage(ChatColor.RED + "Event not found.");
+            }
+            return true;
         }
-        VoxelTimer.EventList.removeAll(ClearList);
     }
 }
