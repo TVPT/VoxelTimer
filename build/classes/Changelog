@@ -1,7 +1,0 @@
-[v. 0.000] - Build-off Timers
-[v. 0.001] - First compile - Giltwist
-[v. 0.002] - Forgot to switch a variable in paste - Giltwist
-[v. 0.003] - made EventList into VoxelTimer.EventList - Giltwist
-[v. 0.004] - Fixed vtlist concats - Giltwist
-[v. 1.000] - First public release - Giltwist
-[v. 1.001] - Should now sort /vtlist according to remaining time - Giltwist

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package Code;
+package com.thevoxelbox.voxeltimer;
 
 import java.io.File;
 import java.io.PrintWriter;

@@ -1,5 +1,5 @@
 name: VoxelTimer
-main: Code.VoxelTimer
+main: com.thevoxelbox.voxeltimer.VoxelTimer
 version: 1.001
 website: http://voxelwiki.com
 author: Giltwist
