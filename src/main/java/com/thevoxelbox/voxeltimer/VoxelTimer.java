@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.Scanner;
 import java.util.TreeSet;
 
@@ -30,7 +31,7 @@ public class VoxelTimer extends JavaPlugin {
             return ((Long) first.endtime).compareTo(second.endtime);
         }
     };
-    private File admnsFile;;
+    private File admnsFile;
 
     @Override
     public boolean onCommand(final CommandSender sender, final Command command, final String commandLabel, final String[] args) {
@@ -60,7 +61,22 @@ public class VoxelTimer extends JavaPlugin {
         }
         return false;
     }
-
+    
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if(command.getName().equalsIgnoreCase("vtjoin")) {
+        	if(args.length == 1) {
+	        	List<String> tabCompletes = new ArrayList<String>();
+	            for(VoxelEvent event : VoxelTimer.EventList) {
+	            	if(event.eventname.startsWith(args[0])) {
+	            		tabCompletes.add(event.eventname);
+	            	}
+	            }
+	            return tabCompletes;
+        	}
+        }
+        return null;
+    }
     @Override
     public void onDisable() {
         VoxelTimer.EventList.clear();
