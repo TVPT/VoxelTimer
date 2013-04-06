@@ -1,10 +1,9 @@
-name: VoxelTimer
+name: ${project.artifactId}
 main: com.thevoxelbox.voxeltimer.VoxelTimer
-version: 1.001
-website: http://voxelwiki.com
-author: Giltwist
-description: >
-             Countdown timers for server events with TP included.
+version: ${project.build.version}
+website: ${project.url}
+authors: [Giltwist, MikeMatrix]
+description: ${project.description}
 commands:
   vtstart:
     description: Start a server event
