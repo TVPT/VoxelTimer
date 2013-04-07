@@ -20,7 +20,6 @@ commands:
     usage: |
            /<command> <EventName>
            Example: /<command> - need to write the help.
-
   vtstop:
     description: Stops a server event
     usage: |
