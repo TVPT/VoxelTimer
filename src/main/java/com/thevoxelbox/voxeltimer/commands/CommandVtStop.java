@@ -9,6 +9,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class CommandVtStop implements CommandExecutor {
     private final VoxelTimer plugin;
@@ -31,16 +32,16 @@ public class CommandVtStop implements CommandExecutor {
                 return false;
             } else {
                 int stoptemp = -1;
-                final ArrayList<VoxelEvent> eventList = plugin.getEventList();
+                final List<VoxelEvent> eventList = plugin.getEventList();
                 for (int i = 0; i < eventList.size(); i++) {
-                    if (args[0].equalsIgnoreCase(eventList.get(i).name)) {
+                    if (args[0].equalsIgnoreCase(eventList.get(i).getName())) {
                         stoptemp = i;
                     }
                 }
 
                 if (stoptemp >= 0) {
                     eventList.remove(stoptemp);
-                    plugin.writeEvents();
+                    plugin.saveEvents();
                     player.sendMessage(ChatColor.GOLD + "Event deleted.");
                 } else {
                     player.sendMessage(ChatColor.RED + "Event not found.");

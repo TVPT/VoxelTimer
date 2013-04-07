@@ -6,22 +6,36 @@ authors: [Giltwist, MikeMatrix]
 description: ${project.description}
 commands:
   vtstart:
-    description: Start a server event
-    usage: |
-           /<command> <EventName> <duration> [TPonjoin:default true]
-           Example: /<command> - need to write the help.
-  vtlist:
-    description: List active server events and remaining time
-    usage: |
-           /<command>
-           Example: /<command> - need to write the help.
-  vtjoin:
-    description: If enabled, allows player to be TPed to an event
-    usage: |
-           /<command> <EventName>
-           Example: /<command> - need to write the help.
+    permission: voxeltimer.command.start
+    permission-message: You do not have sufficient permissions to create events.
+    description: Start a server event.
+    usage: /<command> <EventName> <duration> [teleportOnJoin:default true]
   vtstop:
+    permission: voxeltimer.command.stop
+    permission-message: You do not have sufficient permissions to stop an event.
     description: Stops a server event
-    usage: |
-           /<command> <EventName>
-           Example: /<command> - need to write the help.
+    usage: /<command> <EventName>
+  vtlist:
+    permission: voxeltimer.command.list
+    permission-message: You do not have sufficient permissions to list events.
+    description: List active server events and remaining time
+    usage: /<command>
+  vtjoin:
+    permission: voxeltimer.command.join
+    permission-message: You do not have sufficient permissions to join events.
+    description: If enabled, allows player to be TPed to an event
+    usage: /<command> <EventName>
+permissions:
+  voxeltimer.command.start:
+    description: Allows you to use the start command to create events.
+    default: op
+  voxeltimer.command.start:
+    description: Allows you to use the stop command to remove events.
+    default: op
+  voxeltimer.command.list:
+    description: Allows you to use the list command to list available events.
+    default: true
+  voxeltimer.command.list:
+    description: Allows you to use the join command to join events.
+    default: true
+
